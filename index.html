@@ -1,0 +1,1377 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SimpleShop | E-commerce Premium</title>
+    <meta name="description" content="Plataforma de e-commerce completa com experiência de compra premium">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/vue@3.2.47/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" type="image/png" href="https://cdn.jsdelivr.net/npm/@mdi/svg@7.2.96/svg/shopping.svg">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Montserrat', sans-serif;
+        }
+        .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        .cart-item-enter-active, .cart-item-leave-active {
+            transition: all 0.3s ease;
+        }
+        .cart-item-enter-from, .cart-item-leave-to {
+            opacity: 0;
+            transform: translateX(30px);
+        }
+        .fade-enter-active, .fade-leave-active {
+            transition: opacity 0.3s ease;
+        }
+        .fade-enter-from, .fade-leave-to {
+            opacity: 0;
+        }
+        .image-placeholder {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 antialiased">
+    <div id="app" class="min-h-screen flex flex-col">
+        <!-- Barra de Aviso -->
+        <div class="bg-indigo-600 text-white text-center py-2 px-4 text-sm">
+            <p>Frete grátis para todo Brasil em compras acima de R$ 300 | Entrega em até 5 dias úteis</p>
+        </div>
+
+        <!-- Navegação Premium -->
+        <nav class="bg-white shadow-md sticky top-0 z-30">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-20 items-center">
+                    <!-- Logo -->
+                    <div class="flex items-center">
+                        <a href="#" class="flex items-center">
+                            <span class="text-2xl font-bold text-gray-800">Simple<span class="text-indigo-600">Shop</span></span>
+                        </a>
+                        <div class="hidden md:flex ml-10 space-x-8">
+                            <a href="#" class="text-gray-700 hover:text-indigo-600 transition-colors">Home</a>
+                            <a href="#" class="text-gray-700 hover:text-indigo-600 transition-colors">Produtos</a>
+                            <a href="#" class="text-gray-700 hover:text-indigo-600 transition-colors">Ofertas</a>
+                            <a href="#" class="text-gray-700 hover:text-indigo-600 transition-colors">Sobre Nós</a>
+                            <a href="#" class="text-gray-700 hover:text-indigo-600 transition-colors">Contato</a>
+                        </div>
+                    </div>
+
+                    <!-- Ícones de Ação -->
+                    <div class="flex items-center space-x-6">
+                        <div class="relative hidden md:block">
+                            <input 
+                                type="text" 
+                                placeholder="Pesquisar produtos..." 
+                                class="border rounded-full px-4 py-2 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                v-model="searchQuery"
+                                @keyup.enter="performSearch"
+                            >
+                            <button @click="performSearch" class="absolute right-3 top-2 text-gray-400 hover:text-indigo-600">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+
+                        <div class="flex items-center space-x-4">
+                            <button @click="toggleWishlist" class="relative p-2 group">
+                                <i class="far fa-heart text-xl text-gray-600 group-hover:text-indigo-600 transition-colors"></i>
+                                <span v-if="wishlist.length > 0" class="absolute -top-1 -right-1 bg-indigo-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
+                                    {{wishlist.length}}
+                                </span>
+                            </button>
+                            <button @click="toggleCart" class="relative p-2 group">
+                                <i class="fas fa-shopping-cart text-xl text-gray-600 group-hover:text-indigo-600 transition-colors"></i>
+                                <span v-if="cartTotalItems > 0" class="absolute -top-1 -right-1 bg-indigo-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
+                                    {{cartTotalItems}}
+                                </span>
+                            </button>
+                            <button @click="toggleAdminPanel" class="p-2 group">
+                                <i class="fas fa-cog text-xl text-gray-600 group-hover:text-indigo-600 transition-colors"></i>
+                            </button>
+                            <button class="p-2 group md:hidden" @click="mobileMenuOpen = !mobileMenuOpen">
+                                <i class="fas fa-bars text-xl text-gray-600 group-hover:text-indigo-600 transition-colors"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Menu Mobile -->
+            <transition name="fade">
+                <div v-if="mobileMenuOpen" class="md:hidden bg-white border-t">
+                    <div class="px-2 pt-2 pb-3 space-y-1">
+                        <input 
+                            type="text" 
+                            placeholder="Pesquisar produtos..." 
+                            class="border rounded-full px-4 py-2 text-sm w-full mb-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                            v-model="searchQuery"
+                            @keyup.enter="performSearch"
+                        >
+                        <a href="#" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-indigo-600 hover:bg-gray-50">Home</a>
+                        <a href="#" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-indigo-600 hover:bg-gray-50">Produtos</a>
+                        <a href="#" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-indigo-600 hover:bg-gray-50">Ofertas</a>
+                        <a href="#" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-indigo-600 hover:bg-gray-50">Sobre Nós</a>
+                        <a href="#" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-indigo-600 hover:bg-gray-50">Contato</a>
+                    </div>
+                </div>
+            </transition>
+        </nav>
+
+        <!-- Conteúdo Principal -->
+        <main class="flex-grow">
+            <!-- Banner Hero -->
+            <div class="bg-gradient-to-r from-indigo-500 to-purple-600 text-white py-16">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="md:flex md:items-center md:justify-between">
+                        <div class="md:w-1/2">
+                            <h1 class="text-4xl font-bold mb-4">Tecnologia e Inovação</h1>
+                            <p class="text-xl mb-6">Descubra nossos produtos premium com qualidade excepcional e design sofisticado.</p>
+                            <button @click="scrollToProducts" class="bg-white text-indigo-600 px-6 py-3 rounded-lg font-medium hover:bg-gray-100 transition-colors shadow-lg">
+                                Ver Ofertas
+                            </button>
+                        </div>
+                        <div class="md:w-1/2 mt-8 md:mt-0">
+                            <img src="https://images.unsplash.com/photo-1550009158-9ebf69173e03?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80" alt="Produtos em destaque" class="rounded-lg shadow-2xl">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Seção de Categorias -->
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                <h2 class="text-3xl font-bold text-center mb-12">Nossas Categorias</h2>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                    <div v-for="category in categories" :key="category.id" 
+                         class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow cursor-pointer"
+                         @click="filterByCategory(category.id)">
+                        <div class="h-40 bg-gray-100 flex items-center justify-center">
+                            <i :class="category.icon" class="text-4xl text-indigo-600"></i>
+                        </div>
+                        <div class="p-4 text-center">
+                            <h3 class="font-semibold text-lg">{{category.name}}</h3>
+                            <p class="text-gray-500 text-sm mt-1">{{category.count}} produtos</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Painel Administrativo -->
+            <div v-if="isAdmin" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+                    <div class="px-6 py-4 border-b flex justify-between items-center">
+                        <h2 class="text-2xl font-bold text-gray-800">Painel Administrativo</h2>
+                        <button @click="isAdmin = false" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="p-6">
+                        <form @submit.prevent="currentEditingProduct ? updateProduct() : addProduct()" class="space-y-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Nome do Produto*</label>
+                                    <input v-model="newProduct.name" type="text" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Preço*</label>
+                                    <input v-model="newProduct.price" type="number" step="0.01" min="0" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Categoria*</label>
+                                    <select v-model="newProduct.category" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                                        <option value="">Selecione uma categoria</option>
+                                        <option v-for="category in categories" :value="category.id">{{category.name}}</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Estoque*</label>
+                                    <input v-model="newProduct.stock" type="number" min="0" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Descrição*</label>
+                                    <textarea v-model="newProduct.description" rows="4" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"></textarea>
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Imagens do Produto</label>
+                                    <div class="mt-4 grid grid-cols-3 gap-4">
+                                        <div v-for="(img, index) in newProduct.images" :key="index" class="relative">
+                                            <img :src="img" class="h-32 w-full object-cover rounded-lg border">
+                                            <button @click="removeProductImage(index)" class="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600">
+                                                <i class="fas fa-times text-xs"></i>
+                                            </button>
+                                        </div>
+                                        <label class="cursor-pointer">
+                                            <div class="h-32 flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg hover:border-indigo-500 transition-colors">
+                                                <i class="fas fa-plus text-gray-400 mb-2"></i>
+                                                <span class="text-sm text-gray-500">Adicionar Imagem</span>
+                                                <input type="file" class="hidden" accept="image/*" @change="handleImageUpload" multiple>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex justify-end space-x-3 pt-4 border-t">
+                                <button type="button" @click="cancelAddProduct" class="bg-gray-100 text-gray-700 px-6 py-2 rounded-lg font-medium hover:bg-gray-200 transition-colors">
+                                    Cancelar
+                                </button>
+                                <button type="submit" class="bg-indigo-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-indigo-700 transition-colors shadow-md">
+                                    {{ currentEditingProduct ? 'Atualizar Produto' : 'Salvar Produto' }}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Produtos em Destaque -->
+            <div id="products-section" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 bg-gray-50">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
+                    <h2 class="text-3xl font-bold">Produtos em Destaque</h2>
+                    <div class="flex space-x-4 mt-4 md:mt-0">
+                        <select v-model="sortBy" class="border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                            <option value="name">Ordenar por</option>
+                            <option value="priceLow">Preço: Menor para Maior</option>
+                            <option value="priceHigh">Preço: Maior para Menor</option>
+                            <option value="rating">Melhor Avaliados</option>
+                            <option value="newest">Mais Recentes</option>
+                            <option value="discount">Maior Desconto</option>
+                        </select>
+                        <select v-model="categoryFilter" class="border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                            <option value="">Todas Categorias</option>
+                            <option v-for="category in categories" :value="category.id">{{category.name}}</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div v-if="loadingProducts" class="flex justify-center py-12">
+                    <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+                </div>
+
+                <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                    <div v-for="product in filteredProducts" :key="product.id" class="bg-white rounded-xl shadow-md overflow-hidden product-card transition-all duration-300">
+                        <div class="relative">
+                            <!-- Carrossel de Imagens -->
+                            <div class="h-56 bg-gray-100 overflow-hidden relative">
+                                <div v-if="product.images && product.images.length > 0" class="h-full w-full flex relative">
+                                    <img v-for="(img, index) in product.images" 
+                                         :key="index"
+                                         :src="img" 
+                                         :alt="product.name"
+                                         :class="{'opacity-0 absolute': product.currentImageIndex !== index, 'opacity-100': product.currentImageIndex === index}"
+                                         class="object-cover w-full h-full transition-opacity duration-300"
+                                         @error="handleImageError(product, index)">
+                                         
+                                </div>
+                                
+                                <div v-else class="h-full flex items-center justify-center image-placeholder">
+                                    <i class="fas fa-image text-4xl text-gray-400"></i>
+                                </div>
+                                
+                                <!-- Navegação do Carrossel -->
+                                <div v-if="product.images && product.images.length > 1" class="absolute bottom-2 left-0 right-0 flex justify-center space-x-2">
+                                    <button @click.stop="prevImage(product)" class="absolute left-2 bg-white bg-opacity-50 rounded-full p-1 hover:bg-opacity-100">
+                                        <i class="fas fa-chevron-left text-xs"></i>
+                                    </button>
+                                    <button v-for="(img, index) in product.images" 
+                                            :key="index"
+                                            @click.stop="product.currentImageIndex = index"
+                                            :class="{'bg-indigo-600': product.currentImageIndex === index, 'bg-white': product.currentImageIndex !== index}"
+                                            class="w-2 h-2 rounded-full transition-colors"></button>
+                                    <button @click.stop="nextImage(product)" class="absolute right-2 bg-white bg-opacity-50 rounded-full p-1 hover:bg-opacity-100">
+                                        <i class="fas fa-chevron-right text-xs"></i>
+                                    </button>
+                                </div>
+                                
+                                <!-- Botões de Ação -->
+                                <div class="absolute top-2 right-2 flex flex-col space-y-2">
+                                    <button @click.stop="toggleWishlistItem(product)" 
+                                            class="bg-white rounded-full p-2 shadow-md hover:bg-gray-100 transition-colors"
+                                            :class="{'text-red-500': isInWishlist(product.id)}">
+                                        <i class="far fa-heart"></i>
+                                    </button>
+                                    <button @click.stop="quickView(product)" 
+                                            class="bg-white rounded-full p-2 shadow-md hover:bg-gray-100 transition-colors">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                                
+                                <!-- Badges -->
+                                <div class="absolute top-2 left-2 flex flex-col space-y-2">
+                                    <span v-if="product.stock <= 0" class="bg-red-500 text-white text-xs px-2 py-1 rounded">
+                                        ESGOTADO
+                                    </span>
+                                    <span v-else-if="product.discount" class="bg-green-500 text-white text-xs px-2 py-1 rounded">
+                                        {{product.discount}}% OFF
+                                    </span>
+                                    <span v-if="product.isNew" class="bg-blue-500 text-white text-xs px-2 py-1 rounded">
+                                        NOVO
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-5">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h3 class="font-semibold text-lg mb-1">{{product.name}}</h3>
+                                    <p class="text-gray-500 text-sm line-clamp-2">{{product.description}}</p>
+                                </div>
+                                <span v-if="product.discount" class="text-xs text-gray-400 line-through">R$ {{formatPrice(product.price)}}</span>
+                            </div>
+                            
+                            <div class="mt-4 flex items-center justify-between">
+                                <div>
+                                    <span class="text-xl font-bold">R$ {{formatPrice(product.discount ? (product.price * (1 - product.discount/100)) : product.price)}}</span>
+                                    <span v-if="product.discount" class="ml-2 text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">Economize {{product.discount}}%</span>
+                                </div>
+                                <div class="flex items-center text-yellow-400">
+                                    <i class="fas fa-star" v-for="i in 5" :key="i" :class="{'text-gray-300': i > product.rating}"></i>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-6">
+                                <button 
+                                    @click.stop="addToCart(product)"
+                                    :disabled="product.stock <= 0"
+                                    class="w-full bg-indigo-600 text-white px-4 py-3 rounded-lg font-medium hover:bg-indigo-700 transition-colors flex items-center justify-center"
+                                    :class="{
+                                        'opacity-50 cursor-not-allowed': product.stock <= 0,
+                                        'animate-bounce': recentlyAdded === product.id
+                                    }"
+                                    @animationend="recentlyAdded = null"
+                                >
+                                    <span v-if="product.stock > 0">Adicionar ao Carrinho</span>
+                                    <span v-else>Indisponível</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="filteredProducts.length === 0 && !loadingProducts" class="text-center py-12">
+                    <i class="fas fa-search text-4xl text-gray-400 mb-4"></i>
+                    <h3 class="text-xl font-medium text-gray-600">Nenhum produto encontrado</h3>
+                    <p class="text-gray-500 mt-2">Tente ajustar seus filtros de pesquisa</p>
+                    <button @click="resetFilters" class="mt-4 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors">
+                        Limpar Filtros
+                    </button>
+                </div>
+
+                <!-- Paginação -->
+                <div v-if="filteredProducts.length > 0" class="mt-8 flex justify-center">
+                    <nav class="flex items-center space-x-2">
+                        <button @click="currentPage = 1" :disabled="currentPage === 1" 
+                                class="px-3 py-1 rounded border" :class="{'opacity-50 cursor-not-allowed': currentPage === 1}">
+                            <i class="fas fa-angle-double-left"></i>
+                        </button>
+                        <button @click="currentPage--" :disabled="currentPage === 1" 
+                                class="px-3 py-1 rounded border" :class="{'opacity-50 cursor-not-allowed': currentPage === 1}">
+                            <i class="fas fa-angle-left"></i>
+                        </button>
+                        
+                        <button v-for="page in visiblePages" :key="page" 
+                                @click="currentPage = page"
+                                class="px-3 py-1 rounded border" 
+                                :class="{'bg-indigo-600 text-white': currentPage === page}">
+                            {{page}}
+                        </button>
+                        
+                        <button @click="currentPage++" :disabled="currentPage === totalPages" 
+                                class="px-3 py-1 rounded border" :class="{'opacity-50 cursor-not-allowed': currentPage === totalPages}">
+                            <i class="fas fa-angle-right"></i>
+                        </button>
+                        <button @click="currentPage = totalPages" :disabled="currentPage === totalPages" 
+                                class="px-3 py-1 rounded border" :class="{'opacity-50 cursor-not-allowed': currentPage === totalPages}">
+                            <i class="fas fa-angle-double-right"></i>
+                        </button>
+                    </nav>
+                </div>
+            </div>
+
+            <!-- Quick View Modal -->
+            <transition name="fade">
+                <div v-if="quickViewProduct" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                    <div class="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                        <div class="p-6">
+                            <div class="flex justify-between items-start mb-4">
+                                <h3 class="text-2xl font-bold">{{quickViewProduct.name}}</h3>
+                                <button @click="quickViewProduct = null" class="text-gray-500 hover:text-gray-700">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            
+                            <div class="md:flex gap-6">
+                                <div class="md:w-1/2 mb-6 md:mb-0">
+                                    <div class="bg-gray-100 rounded-lg overflow-hidden h-96 flex items-center justify-center">
+                                        <img v-if="quickViewProduct.images && quickViewProduct.images.length > 0" 
+                                             :src="quickViewProduct.images[quickViewProduct.currentImageIndex || 0]" 
+                                             :alt="quickViewProduct.name"
+                                             class="object-contain w-full h-full"
+                                             @error="handleImageError(quickViewProduct, quickViewProduct.currentImageIndex || 0)">
+                                        <div v-else class="text-gray-400 text-center">
+                                            <i class="fas fa-image text-5xl mb-2"></i>
+                                            <p>Sem imagem</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div v-if="quickViewProduct.images && quickViewProduct.images.length > 1" class="mt-4 grid grid-cols-4 gap-2">
+                                        <img v-for="(img, index) in quickViewProduct.images" 
+                                             :key="index"
+                                             :src="img" 
+                                             @click="quickViewProduct.currentImageIndex = index"
+                                             :class="{'border-2 border-indigo-500': quickViewProduct.currentImageIndex === index}"
+                                             class="h-20 object-cover rounded cursor-pointer">
+                                    </div>
+                                </div>
+                                
+                                <div class="md:w-1/2">
+                                    <div class="mb-4">
+                                        <div class="flex items-center mb-2">
+                                            <div class="flex items-center text-yellow-400 mr-2">
+                                                <i class="fas fa-star" v-for="i in 5" :key="i" :class="{'text-gray-300': i > quickViewProduct.rating}"></i>
+                                            </div>
+                                            <span class="text-sm text-gray-500">({{quickViewProduct.reviews || 0}} avaliações)</span>
+                                        </div>
+                                        
+                                        <div class="flex items-center space-x-4 mb-4">
+                                            <span class="text-3xl font-bold">R$ {{formatPrice(quickViewProduct.discount ? (quickViewProduct.price * (1 - quickViewProduct.discount/100)) : quickViewProduct.price)}}</span>
+                                            <span v-if="quickViewProduct.discount" class="text-xl text-gray-400 line-through">R$ {{formatPrice(quickViewProduct.price)}}</span>
+                                            <span v-if="quickViewProduct.discount" class="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">Economize {{quickViewProduct.discount}}%</span>
+                                        </div>
+                                        
+                                        <p class="text-gray-700 mb-6">{{quickViewProduct.description}}</p>
+                                        
+                                        <div class="mb-6">
+                                            <h4 class="font-semibold mb-2">Especificações:</h4>
+                                            <ul class="grid grid-cols-2 gap-2 text-sm text-gray-600">
+                                                <li v-for="(value, key) in quickViewProduct.specs" :key="key" class="flex">
+                                                    <span class="font-medium text-gray-800 mr-1">{{key}}:</span>
+                                                    <span>{{value}}</span>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                        
+                                        <div class="flex items-center space-x-4 mb-6">
+                                            <div class="flex items-center border rounded-lg overflow-hidden">
+                                                <button @click="quickViewQuantity > 1 ? quickViewQuantity-- : null" 
+                                                        class="px-3 py-2 bg-gray-100 hover:bg-gray-200">
+                                                    <i class="fas fa-minus"></i>
+                                                </button>
+                                                <span class="px-4">{{quickViewQuantity}}</span>
+                                                <button @click="quickViewQuantity++" 
+                                                        class="px-3 py-2 bg-gray-100 hover:bg-gray-200">
+                                                    <i class="fas fa-plus"></i>
+                                                </button>
+                                            </div>
+                                            
+                                            <button @click="addToCart(quickViewProduct, quickViewQuantity)" 
+                                                    :disabled="quickViewProduct.stock <= 0"
+                                                    class="flex-1 bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors"
+                                                    :class="{'opacity-50 cursor-not-allowed': quickViewProduct.stock <= 0}">
+                                                Adicionar ao Carrinho
+                                            </button>
+                                        </div>
+                                        
+                                        <div class="flex space-x-3">
+                                            <button @click="toggleWishlistItem(quickViewProduct)" 
+                                                    class="flex items-center justify-center border rounded-lg px-4 py-2 text-gray-700 hover:bg-gray-100"
+                                                    :class="{'text-red-500': isInWishlist(quickViewProduct.id)}">
+                                                <i class="far fa-heart mr-2"></i>
+                                                {{ isInWishlist(quickViewProduct.id) ? 'Remover' : 'Lista de Desejos' }}
+                                            </button>
+                                            
+                                            <button class="flex items-center justify-center border rounded-lg px-4 py-2 text-gray-700 hover:bg-gray-100">
+                                                <i class="fas fa-share-alt mr-2"></i>
+                                                Compartilhar
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </transition>
+
+            <!-- Newsletter -->
+            <div class="bg-indigo-700 text-white py-16">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                    <h2 class="text-3xl font-bold mb-4">Receba nossas ofertas exclusivas</h2>
+                    <p class="text-xl mb-8 max-w-2xl mx-auto">Assine nossa newsletter e receba 10% de desconto na primeira compra!</p>
+                    <div class="flex flex-col sm:flex-row justify-center max-w-md mx-auto">
+                        <input type="email" placeholder="Seu melhor e-mail" v-model="newsletterEmail" 
+                               class="px-4 py-3 rounded-lg text-gray-900 w-full mb-2 sm:mb-0 sm:mr-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <button @click="subscribeNewsletter" class="bg-white text-indigo-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-100 transition-colors shadow-lg whitespace-nowrap">
+                            Assinar Newsletter
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Rodapé -->
+        <footer class="bg-gray-800 text-white pt-12 pb-6">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                    <div>
+                        <h3 class="text-xl font-bold mb-4">SimpleShop</h3>
+                        <p class="text-gray-400">A melhor experiência de compra online com produtos de alta qualidade e atendimento excepcional.</p>
+                        <div class="flex space-x-4 mt-4">
+                            <a href="#" class="text-gray-400 hover:text-white transition-colors">
+                                <i class="fab fa-facebook-f"></i>
+                            </a>
+                            <a href="#" class="text-gray-400 hover:text-white transition-colors">
+                                <i class="fab fa-instagram"></i>
+                            </a>
+                            <a href="#" class="text-gray-400 hover:text-white transition-colors">
+                                <i class="fab fa-twitter"></i>
+                            </a>
+                            <a href="#" class="text-gray-400 hover:text-white transition-colors">
+                                <i class="fab fa-youtube"></i>
+                            </a>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold text-lg mb-4">Institucional</h4>
+                        <ul class="space-y-2">
+                            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Sobre Nós</a></li>
+                            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Nossa História</a></li>
+                            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Trabalhe Conosco</a></li>
+                            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Política de Privacidade</a></li>
+                            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Termos de Serviço</a></li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold text-lg mb-4">Atendimento</h4>
+                        <ul class="space-y-2">
+                            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Central de Ajuda</a></li>
+                            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Meus Pedidos</a></li>
+                            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Trocas e Devoluções</a></li>
+                            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Fale Conosco</a></li>
+                            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Dúvidas Frequentes</a></li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold text-lg mb-4">Contato</h4>
+                        <address class="text-gray-400 not-italic">
+                            <p class="mb-2"><i class="fas fa-map-marker-alt mr-2"></i> Av. Paulista, 1000 - São Paulo/SP</p>
+                            <p class="mb-2"><i class="fas fa-phone-alt mr-2"></i> (11) 4002-8922</p>
+                            <p class="mb-2"><i class="fas fa-envelope mr-2"></i> contato@simpleshop.com.br</p>
+                            <p><i class="fas fa-clock mr-2"></i> Seg-Sex: 9h-18h</p>
+                        </address>
+                    </div>
+                </div>
+                <div class="border-t border-gray-700 mt-8 pt-6 text-center text-gray-400">
+                    <p>&copy; 2023 SimpleShop. Todos os direitos reservados.</p>
+                    <p class="mt-2 text-sm">CNPJ: 12.345.678/0001-99</p>
+                </div>
+            </div>
+        </footer>
+
+        <!-- Carrinho de Compras -->
+        <transition name="fade">
+            <div v-if="showCart" class="fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity" @click.self="toggleCart"></div>
+        </transition>
+
+        <transition name="fade">
+            <div v-if="showCart" class="fixed inset-y-0 right-0 w-full max-w-md bg-white shadow-xl z-50 transform transition-transform duration-300 ease-in-out">
+                <div class="h-full flex flex-col">
+                    <div class="px-6 py-4 border-b flex items-center justify-between">
+                        <h2 class="text-xl font-bold">Meu Carrinho ({{cartTotalItems}} itens)</h2>
+                        <button @click="toggleCart" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="flex-1 overflow-y-auto px-6 py-4">
+                        <div v-if="cart.length === 0" class="text-center py-12">
+                            <i class="fas fa-shopping-cart text-5xl text-gray-300 mb-4"></i>
+                            <h3 class="text-xl font-medium text-gray-600">Seu carrinho está vazio</h3>
+                            <p class="text-gray-500 mt-2">Adicione produtos para continuar</p>
+                            <button @click="toggleCart" class="mt-6 bg-indigo-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-indigo-700 transition-colors">
+                                Continuar Comprando
+                            </button>
+                        </div>
+                        
+                        <transition-group name="cart-item" tag="div" class="space-y-4" v-else>
+                            <div v-for="item in cart" :key="item.id" class="flex items-center border-b pb-4">
+                                <div class="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                                    <img v-if="item.images && item.images.length > 0" 
+                                         :src="item.images[0]" 
+                                         :alt="item.name" 
+                                         class="object-cover w-full h-full"
+                                         @error="handleImageError(item, 0)">
+                                    <div v-else class="h-full flex items-center justify-center text-gray-400">
+                                        <i class="fas fa-image text-xl"></i>
+                                    </div>
+                                </div>
+                                <div class="ml-4 flex-grow">
+                                    <h3 class="font-medium">{{item.name}}</h3>
+                                    <p class="text-gray-600 text-sm">R$ {{formatPrice(item.price)}} {{item.discount ? `(${item.discount}% OFF)` : ''}}</p>
+                                    <div class="flex items-center mt-2">
+                                        <button @click="decreaseQuantity(item)" class="text-gray-500 hover:text-indigo-600 transition-colors">
+                                            <i class="fas fa-minus"></i>
+                                        </button>
+                                        <span class="mx-3 w-8 text-center">{{item.quantity}}</span>
+                                        <button @click="increaseQuantity(item)" :disabled="item.quantity >= item.stock" class="text-gray-500 hover:text-indigo-600 transition-colors" :class="{'opacity-50 cursor-not-allowed': item.quantity >= item.stock}">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="ml-4 flex flex-col items-end">
+                                    <span class="font-medium">R$ {{formatPrice(item.price * item.quantity)}}</span>
+                                    <button @click="removeFromCart(item)" class="text-red-500 hover:text-red-700 mt-2">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </transition-group>
+                    </div>
+                    
+                    <div class="border-t px-6 py-4">
+                        <div class="space-y-3">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Subtotal</span>
+                                <span class="font-medium">R$ {{formatPrice(cartTotal)}}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Frete</span>
+                                <span class="font-medium">{{shippingCost === 0 ? 'Grátis' : `R$ ${formatPrice(shippingCost)}`}}</span>
+                            </div>
+                            <div v-if="cartTotal > 300" class="text-green-600 text-sm">
+                                <i class="fas fa-check-circle mr-1"></i> Parabéns! Seu frete é grátis
+                            </div>
+                            <div v-else class="text-sm text-gray-500">
+                                Adicione mais R$ {{formatPrice(300 - cartTotal)}} para frete grátis
+                            </div>
+                        </div>
+                        
+                        <div class="border-t my-4 pt-4 flex justify-between text-lg font-bold">
+                            <span>Total</span>
+                            <span>R$ {{formatPrice(cartTotal + shippingCost)}}</span>
+                        </div>
+                        
+                        <button 
+                            @click="checkout" 
+                            class="w-full bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 transition-colors flex items-center justify-center"
+                            :disabled="checkoutLoading"
+                        >
+                            <span v-if="!checkoutLoading">Finalizar Compra</span>
+                            <span v-else class="flex items-center">
+                                <i class="fas fa-circle-notch fa-spin mr-2"></i> Processando...
+                            </span>
+                        </button>
+                        
+                        <div class="mt-4 flex justify-center space-x-4">
+                            <img src="https://via.placeholder.com/40x25?text=Visa" alt="Visa" class="h-6">
+                            <img src="https://via.placeholder.com/40x25?text=MC" alt="Mastercard" class="h-6">
+                            <img src="https://via.placeholder.com/40x25?text=Amex" alt="American Express" class="h-6">
+                            <img src="https://via.placeholder.com/40x25?text=Elo" alt="Elo" class="h-6">
+                            <img src="https://via.placeholder.com/40x25?text=Pix" alt="Pix" class="h-6">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </transition>
+    </div>
+
+    <script type="module">
+        const { createApp, ref, computed, onMounted, watch } = Vue;
+
+        createApp({
+            setup() {
+                // Estado da aplicação
+                const isAdmin = ref(false);
+                const showCart = ref(false);
+                const showWishlist = ref(false);
+                const mobileMenuOpen = ref(false);
+                const recentlyAdded = ref(null);
+                const searchQuery = ref('');
+                const sortBy = ref('name');
+                const categoryFilter = ref('');
+                const checkoutLoading = ref(false);
+                const loadingProducts = ref(false);
+                const quickViewProduct = ref(null);
+                const quickViewQuantity = ref(1);
+                const newsletterEmail = ref('');
+                const currentPage = ref(1);
+                const itemsPerPage = 8;
+                const currentEditingProduct = ref(null);
+                
+                // Categorias
+                const categories = ref([
+                    { id: 1, name: 'Eletrônicos', icon: 'fas fa-laptop', count: 12 },
+                    { id: 2, name: 'Smartphones', icon: 'fas fa-mobile-alt', count: 8 },
+                    { id: 3, name: 'Áudio', icon: 'fas fa-headphones', count: 5 },
+                    { id: 4, name: 'Acessórios', icon: 'fas fa-keyboard', count: 15 }
+                ]);
+
+                // Produtos
+                const savedProducts = localStorage.getItem('products');
+                const products = ref(savedProducts ? JSON.parse(savedProducts) : [
+                    { 
+                        id: 1, 
+                        name: 'Notebook Ultra Slim', 
+                        description: 'Notebook de alto desempenho com tela Full HD e 8GB de RAM', 
+                        price: 4299.99,
+                        images: [
+                            'https://images.unsplash.com/photo-1593642632823-8f785ba67e45?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+                            'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80'
+                        ],
+                        category: 1,
+                        stock: 10,
+                        rating: 4,
+                        discount: 15,
+                        isNew: true,
+                        specs: {
+                            'Processador': 'Intel Core i5',
+                            'Memória': '8GB DDR4',
+                            'Armazenamento': '256GB SSD',
+                            'Tela': '15.6" Full HD'
+                        },
+                        reviews: 24
+                    },
+                    { 
+                        id: 2, 
+                        name: 'Smartphone Premium', 
+                        description: 'Câmera tripla de 48MP, tela AMOLED e bateria de longa duração', 
+                        price: 2999.99,
+                        images: [
+                            'https://images.unsplash.com/photo-1601784551446-20c9e07cdbdb?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+                            'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80'
+                        ],
+                        category: 2,
+                        stock: 5,
+                        rating: 5,
+                        discount: 10,
+                        isNew: false,
+                        specs: {
+                            'Tela': '6.5" AMOLED',
+                            'Câmera': '48MP + 12MP + 5MP',
+                            'Bateria': '4000mAh',
+                            'Processador': 'Snapdragon 865'
+                        },
+                        reviews: 42
+                    },
+                    { 
+                        id: 3, 
+                        name: 'Fones Bluetooth', 
+                        description: 'Cancelamento de ruído ativo e 30h de bateria', 
+                        price: 799.99,
+                        images: [
+                            'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+                            'https://images.unsplash.com/photo-1572569511254-d8f925fe2cbb?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80'
+                        ],
+                        category: 3,
+                        stock: 8,
+                        rating: 4,
+                        discount: 0,
+                        isNew: true,
+                        specs: {
+                            'Bateria': '30h de uso',
+                            'Conexão': 'Bluetooth 5.0',
+                            'Cancelamento de Ruído': 'Ativo',
+                            'Peso': '250g'
+                        },
+                        reviews: 15
+                    },
+                    { 
+                        id: 4, 
+                        name: 'Smartwatch Pro', 
+                        description: 'Monitoramento de saúde e resistente à água', 
+                        price: 1299.99,
+                        images: [
+                            'https://images.unsplash.com/photo-1523275335684-37898b6baf30?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+                            'https://images.unsplash.com/photo-1558126319-c9feecbf57ee?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80'
+                        ],
+                        category: 1,
+                        stock: 0,
+                        rating: 3,
+                        discount: 20,
+                        isNew: false,
+                        specs: {
+                            'Tela': '1.4" AMOLED',
+                            'Bateria': '7 dias',
+                            'Resistência': '5ATM',
+                            'Sensores': 'Frequência cardíaca, SpO2'
+                        },
+                        reviews: 8
+                    },
+                    { 
+                        id: 5, 
+                        name: 'Teclado Mecânico', 
+                        description: 'Switches azuis e iluminação RGB personalizável', 
+                        price: 399.99,
+                        images: [
+                            'https://images.unsplash.com/photo-1587829741301-dc798b83add3?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+                            'https://images.unsplash.com/photo-1555680512-5b1d2c3f3a23?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80'
+                        ],
+                        category: 4,
+                        stock: 15,
+                        rating: 5,
+                        discount: 0,
+                        isNew: false,
+                        specs: {
+                            'Tipo': 'Mecânico',
+                            'Switches': 'Blue',
+                            'Iluminação': 'RGB',
+                            'Conexão': 'USB'
+                        },
+                        reviews: 31
+                    },
+                    { 
+                        id: 6, 
+                        name: 'Mouse Gamer', 
+                        description: '16000 DPI e design ergonômico', 
+                        price: 299.99,
+                        images: [
+                            'https://images.unsplash.com/photo-1527814050087-3793815479db?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+                            'https://images.unsplash.com/photo-1547394765-185e1e68f34e?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80'
+                        ],
+                        category: 4,
+                        stock: 12,
+                        rating: 4,
+                        discount: 5,
+                        isNew: true,
+                        specs: {
+                            'DPI': '16000',
+                            'Botões': '6 programáveis',
+                            'Peso': '120g',
+                            'Conexão': 'USB'
+                        },
+                        reviews: 19
+                    },
+                    { 
+                        id: 7, 
+                        name: 'Monitor 4K Dell 27"', 
+                        description: 'Tela de 27 polegadas com taxa de atualização de 144Hz e HDR400', 
+                        price: 2499.99,
+                        images: [
+                            'https://i.imgur.com/8Km9tLL.jpg',
+                            'https://i.imgur.com/J9a7x1h.jpg'
+                        ],
+                        category: 1,
+                        stock: 3,
+                        rating: 5,
+                        discount: 0,
+                        isNew: true,
+                        specs: {
+                            'Tamanho': '27 polegadas',
+                            'Resolução': '3840x2160 (4K)',
+                            'Taxa de Atualização': '144Hz',
+                            'Tipo de Painel': 'IPS',
+                            'HDR': 'HDR400'
+                        },
+                        reviews: 27
+                    },
+                    { 
+                        id: 8, 
+                        name: 'Caixa de Som Bluetooth', 
+                        description: 'Som surround 360° e 20h de bateria', 
+                        price: 599.99,
+                        images: [
+    'https://images.unsplash.com/photo-1572569511254-d8f925fe2cbb?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+    'https://images.unsplash.com/photo-1602526216034-00fd17b41a46?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80'
+],
+                        category: 3,
+                        stock: 7,
+                        rating: 4,
+                        discount: 0,
+                        isNew: false,
+                        specs: {
+                            'Potência': '20W RMS',
+                            'Bateria': '20 horas',
+                            'Conexões': 'Bluetooth, AUX',
+                            'Resistência': 'IPX7'
+                        },
+                        reviews: 13
+                    }
+                ]);
+
+                // Carrinho
+                const savedCart = localStorage.getItem('cart');
+                const cart = ref(savedCart ? JSON.parse(savedCart) : []);
+                
+                // Lista de Desejos
+                const savedWishlist = localStorage.getItem('wishlist');
+                const wishlist = ref(savedWishlist ? JSON.parse(savedWishlist) : []);
+                
+                // Novo produto (admin)
+                const newProduct = ref({
+                    name: '',
+                    price: '',
+                    description: '',
+                    images: [],
+                    category: '',
+                    stock: 10,
+                    rating: 5,
+                    discount: 0,
+                    specs: {}
+                });
+
+                // Computed properties
+                const shippingCost = computed(() => {
+                    return cartTotal.value > 300 ? 0 : 19.99;
+                });
+
+                const cartTotal = computed(() => {
+                    return cart.value.reduce((total, item) => {
+                        const price = item.discount ? item.price * (1 - item.discount/100) : item.price;
+                        return total + (price * item.quantity);
+                    }, 0);
+                });
+
+                const cartTotalItems = computed(() => {
+                    return cart.value.reduce((total, item) => total + item.quantity, 0);
+                });
+
+                const totalPages = computed(() => {
+                    return Math.ceil(filteredProducts.value.length / itemsPerPage);
+                });
+
+                const visiblePages = computed(() => {
+                    const pages = [];
+                    const maxVisible = 5;
+                    let start = Math.max(1, currentPage.value - Math.floor(maxVisible / 2));
+                    let end = Math.min(totalPages.value, start + maxVisible - 1);
+                    
+                    if (end - start + 1 < maxVisible) {
+                        start = Math.max(1, end - maxVisible + 1);
+                    }
+                    
+                    for (let i = start; i <= end; i++) {
+                        pages.push(i);
+                    }
+                    
+                    return pages;
+                });
+
+                const paginatedProducts = computed(() => {
+                    const start = (currentPage.value - 1) * itemsPerPage;
+                    const end = start + itemsPerPage;
+                    return filteredProducts.value.slice(start, end);
+                });
+
+                const filteredProducts = computed(() => {
+                    let filtered = [...products.value];
+                    
+                    // Filtro por pesquisa
+                    if (searchQuery.value) {
+                        const query = searchQuery.value.toLowerCase();
+                        filtered = filtered.filter(product => 
+                            product.name.toLowerCase().includes(query) || 
+                            product.description.toLowerCase().includes(query)
+                        );
+                    }
+                    
+                    // Filtro por categoria
+                    if (categoryFilter.value) {
+                        filtered = filtered.filter(product => product.category == categoryFilter.value);
+                    }
+                    
+                    // Ordenação
+                    switch(sortBy.value) {
+                        case 'name':
+                            filtered.sort((a, b) => a.name.localeCompare(b.name));
+                            break;
+                        case 'priceLow':
+                            filtered.sort((a, b) => {
+                                const priceA = a.discount ? a.price * (1 - a.discount/100) : a.price;
+                                const priceB = b.discount ? b.price * (1 - b.discount/100) : b.price;
+                                return priceA - priceB;
+                            });
+                            break;
+                        case 'priceHigh':
+                            filtered.sort((a, b) => {
+                                const priceA = a.discount ? a.price * (1 - a.discount/100) : a.price;
+                                const priceB = b.discount ? b.price * (1 - b.discount/100) : b.price;
+                                return priceB - priceA;
+                            });
+                            break;
+                        case 'rating':
+                            filtered.sort((a, b) => b.rating - a.rating);
+                            break;
+                        case 'newest':
+                            filtered.sort((a, b) => b.id - a.id);
+                            break;
+                        case 'discount':
+                            filtered.sort((a, b) => (b.discount || 0) - (a.discount || 0));
+                            break;
+                    }
+                    
+                    return filtered;
+                });
+
+                // Métodos
+                const formatPrice = (price) => {
+                    return parseFloat(price).toFixed(2).replace('.', ',');
+                };
+
+                const toggleCart = () => {
+                    showCart.value = !showCart.value;
+                };
+
+                const toggleWishlist = () => {
+                    showWishlist.value = !showWishlist.value;
+                };
+
+                const toggleAdminPanel = () => {
+                    isAdmin.value = !isAdmin.value;
+                    if (isAdmin.value) {
+                        newProduct.value = {
+                            name: '',
+                            price: '',
+                            description: '',
+                            images: [],
+                            category: '',
+                            stock: 10,
+                            rating: 5,
+                            discount: 0,
+                            specs: {}
+                        };
+                        currentEditingProduct.value = null;
+                    }
+                };
+
+                const performSearch = () => {
+                    currentPage.value = 1;
+                    loadingProducts.value = true;
+                    setTimeout(() => {
+                        loadingProducts.value = false;
+                    }, 500);
+                };
+
+                const filterByCategory = (categoryId) => {
+                    categoryFilter.value = categoryId;
+                    currentPage.value = 1;
+                    scrollToProducts();
+                };
+
+                const resetFilters = () => {
+                    searchQuery.value = '';
+                    categoryFilter.value = '';
+                    sortBy.value = 'name';
+                    currentPage.value = 1;
+                };
+
+                const scrollToProducts = () => {
+                    const element = document.getElementById('products-section');
+                    if (element) {
+                        element.scrollIntoView({ behavior: 'smooth' });
+                    }
+                };
+
+                const isInWishlist = (productId) => {
+                    return wishlist.value.some(item => item.id === productId);
+                };
+
+                const toggleWishlistItem = (product) => {
+                    const index = wishlist.value.findIndex(item => item.id === product.id);
+                    if (index > -1) {
+                        wishlist.value.splice(index, 1);
+                    } else {
+                        wishlist.value.push({...product});
+                    }
+                    saveWishlistToLocalStorage();
+                };
+
+                const quickView = (product) => {
+                    quickViewProduct.value = {...product};
+                    quickViewQuantity.value = 1;
+                };
+
+                const addToCart = (product, quantity = 1) => {
+                    if (product.stock <= 0) return;
+                    
+                    const existingItem = cart.value.find(item => item.id === product.id);
+                    
+                    if (existingItem) {
+                        if (existingItem.quantity + quantity > product.stock) {
+                            alert(`Quantidade indisponível em estoque. Máximo: ${product.stock}`);
+                            return;
+                        }
+                        existingItem.quantity += quantity;
+                    } else {
+                        cart.value.push({
+                            ...product,
+                            quantity: quantity
+                        });
+                    }
+                    
+                    recentlyAdded.value = product.id;
+                    saveCartToLocalStorage();
+                    
+                    // Feedback visual
+                    showCart.value = true;
+                };
+
+                const increaseQuantity = (item) => {
+                    const product = products.value.find(p => p.id === item.id);
+                    if (item.quantity >= product.stock) {
+                        alert(`Quantidade máxima em estoque: ${product.stock}`);
+                        return;
+                    }
+                    
+                    item.quantity += 1;
+                    saveCartToLocalStorage();
+                };
+
+                const decreaseQuantity = (item) => {
+                    if (item.quantity > 1) {
+                        item.quantity -= 1;
+                    } else {
+                        removeFromCart(item);
+                    }
+                    saveCartToLocalStorage();
+                };
+
+                const removeFromCart = (item) => {
+                    const index = cart.value.findIndex(i => i.id === item.id);
+                    if (index > -1) {
+                        cart.value.splice(index, 1);
+                    }
+                    saveCartToLocalStorage();
+                };
+
+                const editProduct = (product) => {
+                    currentEditingProduct.value = product.id;
+                    newProduct.value = {...product};
+                    isAdmin.value = true;
+                };
+
+                const addProduct = () => {
+                    const newId = products.value.length > 0 ? 
+                        Math.max(...products.value.map(p => p.id)) + 1 : 1;
+                    
+                    const product = {
+                        id: newId,
+                        name: newProduct.value.name,
+                        description: newProduct.value.description,
+                        price: parseFloat(newProduct.value.price),
+                        images: [...newProduct.value.images],
+                        category: parseInt(newProduct.value.category),
+                        stock: parseInt(newProduct.value.stock),
+                        rating: parseInt(newProduct.value.rating),
+                        discount: parseInt(newProduct.value.discount || 0),
+                        isNew: true,
+                        specs: {...newProduct.value.specs},
+                        reviews: 0
+                    };
+                    
+                    products.value.push(product);
+                    saveProductsToLocalStorage();
+                    
+                    resetProductForm();
+                    isAdmin.value = false;
+                };
+
+                const updateProduct = () => {
+                    const index = products.value.findIndex(p => p.id === currentEditingProduct.value);
+                    if (index > -1) {
+                        products.value[index] = {
+                            ...products.value[index],
+                            name: newProduct.value.name,
+                            description: newProduct.value.description,
+                            price: parseFloat(newProduct.value.price),
+                            images: [...newProduct.value.images],
+                            category: parseInt(newProduct.value.category),
+                            stock: parseInt(newProduct.value.stock),
+                            rating: parseInt(newProduct.value.rating),
+                            discount: parseInt(newProduct.value.discount || 0),
+                            specs: {...newProduct.value.specs}
+                        };
+                        
+                        saveProductsToLocalStorage();
+                        resetProductForm();
+                        isAdmin.value = false;
+                        currentEditingProduct.value = null;
+                    }
+                };
+
+                const resetProductForm = () => {
+                    newProduct.value = {
+                        name: '',
+                        price: '',
+                        description: '',
+                        images: [],
+                        category: '',
+                        stock: 10,
+                        rating: 5,
+                        discount: 0,
+                        specs: {}
+                    };
+                };
+
+                const cancelAddProduct = () => {
+                    resetProductForm();
+                    isAdmin.value = false;
+                    currentEditingProduct.value = null;
+                };
+
+                const handleImageUpload = (event) => {
+                    const files = event.target.files;
+                    if (!files || files.length === 0) return;
+                    
+                    for (let i = 0; i < files.length; i++) {
+                        const file = files[i];
+                        if (file.size > 5 * 1024 * 1024) { // 5MB
+                            alert('Arquivo muito grande (máximo 5MB)');
+                            continue;
+                        }
+                        
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            newProduct.value.images.push(e.target.result);
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                };
+
+                const removeProductImage = (index) => {
+                    newProduct.value.images.splice(index, 1);
+                };
+
+                const handleImageError = (product, index) => {
+    // Substitui por um placeholder genérico
+    product.images[index] = 'https://via.placeholder.com/300x200?text=Imagem+Não+Disponível';
+    
+    // Se estiver editando no painel admin, atualize também o newProduct
+    if (currentEditingProduct.value && currentEditingProduct.value.id === product.id) {
+        const editIndex = newProduct.value.images.findIndex(img => img === product.images[index]);
+        if (editIndex > -1) {
+            newProduct.value.images[editIndex] = 'https://via.placeholder.com/300x200?text=Imagem+Não+Disponível';
+        }
+    }
+};
+
+                const subscribeNewsletter = () => {
+                    if (!newsletterEmail.value) {
+                        alert('Por favor, insira seu e-mail');
+                        return;
+                    }
+                    
+                    // Simular envio
+                    setTimeout(() => {
+                        alert(`Obrigado por assinar nossa newsletter! Um cupom de 10% de desconto foi enviado para ${newsletterEmail.value}`);
+                        newsletterEmail.value = '';
+                    }, 500);
+                };
+
+                const checkout = async () => {
+                    checkoutLoading.value = true;
+                    
+                    try {
+                        // Simula processamento do pagamento
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                        
+                        // Atualiza estoque
+                        cart.value.forEach(item => {
+                            const product = products.value.find(p => p.id === item.id);
+                            if (product) {
+                                product.stock -= item.quantity;
+                            }
+                        });
+                        
+                        // Notificação de sucesso
+                        alert(`Pedido #${Math.floor(Math.random() * 10000)} realizado com sucesso!\nTotal: R$ ${formatPrice(cartTotal.value + shippingCost.value)}\nUm e-mail de confirmação foi enviado.`);
+                        
+                        // Limpa carrinho
+                        cart.value = [];
+                        saveCartToLocalStorage();
+                        saveProductsToLocalStorage();
+                        
+                        // Fecha carrinho
+                        showCart.value = false;
+                    } catch (error) {
+                        alert('Erro no pagamento: ' + error.message);
+                    } finally {
+                        checkoutLoading.value = false;
+                    }
+                };
+
+                const saveCartToLocalStorage = () => {
+                    localStorage.setItem('cart', JSON.stringify(cart.value));
+                };
+
+                const saveWishlistToLocalStorage = () => {
+                    localStorage.setItem('wishlist', JSON.stringify(wishlist.value));
+                };
+
+                const saveProductsToLocalStorage = () => {
+                    localStorage.setItem('products', JSON.stringify(products.value));
+                };
+
+                // Watchers
+                watch(cart, saveCartToLocalStorage, { deep: true });
+                watch(wishlist, saveWishlistToLocalStorage, { deep: true });
+                watch(products, saveProductsToLocalStorage, { deep: true });
+
+                // Lifecycle hooks
+                onMounted(() => {
+                    // Simula carregamento de produtos
+                    loadingProducts.value = true;
+                    setTimeout(() => {
+                        loadingProducts.value = false;
+                    }, 800);
+                });
+
+                return {
+                    isAdmin,
+                    showCart,
+                    showWishlist,
+                    mobileMenuOpen,
+                    products,
+                    cart,
+                    wishlist,
+                    categories,
+                    newProduct,
+                    recentlyAdded,
+                    searchQuery,
+                    sortBy,
+                    categoryFilter,
+                    checkoutLoading,
+                    loadingProducts,
+                    quickViewProduct,
+                    quickViewQuantity,
+                    newsletterEmail,
+                    currentPage,
+                    totalPages,
+                    visiblePages,
+                    currentEditingProduct,
+                    cartTotal,
+                    cartTotalItems,
+                    shippingCost,
+                    filteredProducts: paginatedProducts,
+                    formatPrice,
+                    toggleCart,
+                    toggleWishlist,
+                    toggleAdminPanel,
+                    performSearch,
+                    filterByCategory,
+                    resetFilters,
+                    scrollToProducts,
+                    isInWishlist,
+                    toggleWishlistItem,
+                    quickView,
+                    addToCart,
+                    increaseQuantity,
+                    decreaseQuantity,
+                    removeFromCart,
+                    editProduct,
+                    addProduct,
+                    updateProduct,
+                    cancelAddProduct,
+                    handleImageUpload,
+                    removeProductImage,
+                    handleImageError,
+                    subscribeNewsletter,
+                    checkout
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
