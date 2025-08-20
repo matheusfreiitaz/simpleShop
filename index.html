@@ -5,16 +5,37 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SimpleShop | E-commerce Premium</title>
     <meta name="description" content="Plataforma de e-commerce completa com experiência de compra premium">
-    
-    <!-- CSS Externos -->
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/vue@3.2.47/dist/vue.global.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- CSS Local -->
-    <link rel="stylesheet" href="css/style.css">
-    
     <link rel="icon" type="image/png" href="https://cdn.jsdelivr.net/npm/@mdi/svg@7.2.96/svg/shopping.svg">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Montserrat', sans-serif;
+        }
+        .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        .cart-item-enter-active, .cart-item-leave-active {
+            transition: all 0.3s ease;
+        }
+        .cart-item-enter-from, .cart-item-leave-to {
+            opacity: 0;
+            transform: translateX(30px);
+        }
+        .fade-enter-active, .fade-leave-active {
+            transition: opacity 0.3s ease;
+        }
+        .fade-enter-from, .fade-leave-to {
+            opacity: 0;
+        }
+        .image-placeholder {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
+    </style>
 </head>
 <body class="bg-gray-50 antialiased">
     <div id="app" class="min-h-screen flex flex-col">
@@ -479,7 +500,7 @@
             <div class="bg-indigo-700 text-white py-16">
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
                     <h2 class="text-3xl font-bold mb-4">Receba nossas ofertas exclusivas</h2>
-                    <p class="text-xl mb-8 max-w-2xl mx-auto">Assine nossa newsletter и receba 10% de desconto na primeira compra!</p>
+                    <p class="text-xl mb-8 max-w-2xl mx-auto">Assine nossa newsletter e receba 10% de desconto na primeira compra!</p>
                     <div class="flex flex-col sm:flex-row justify-center max-w-md mx-auto">
                         <input type="email" placeholder="Seu melhor e-mail" v-model="newsletterEmail" 
                                class="px-4 py-3 rounded-lg text-gray-900 w-full mb-2 sm:mb-0 sm:mr-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
@@ -527,7 +548,7 @@
                     <div>
                         <h4 class="font-semibold text-lg mb-4">Contato</h4>
                         <address class="text-gray-400 not-italic">
-                            <p class="mb-2"><i class="fas fa-map-marker-alt mr-2"></i> Minas Gerais- Neves</p>
+                            <p class="mb-2"><i class="fas fa-map-marker-alt mr-2"></i> Minas Gerais- Neves/p>
                             <p class="mb-2"><i class="fas fa-phone-alt mr-2"></i> (31) 988896957</p>
                             <p class="mb-2"><i class="fas fa-envelope mr-2"></i> matheusfreiitas77@gmail.com</p>
                             
@@ -577,7 +598,7 @@
                                 </div>
                                 <div class="ml-4 flex-grow">
                                     <h3 class="font-medium">{{item.name}}</h3>
-                                    <p class="text-gray-600 text-sm">R$ {{formatPrice(item.price)}} {{item.discount ? `(${item.discount}% OFF)` : ''}}</p>
+                                    <p class="text-gray-600 text-sm">R$ {{formatPrice(item.price)}} {{item.discount ? (${item.discount}% OFF) : ''}}</p>
                                     <div class="flex items-center mt-2">
                                         <button @click="decreaseQuantity(item)" class="text-gray-500 hover:text-indigo-600 transition-colors">
                                             <i class="fas fa-minus"></i>
@@ -606,7 +627,7 @@
                             </div>
                             <div class="flex justify-between">
                                 <span class="text-gray-600">Frete</span>
-                                <span class="font-medium">{{shippingCost === 0 ? 'Grátis' : `R$ ${formatPrice(shippingCost)}`}}</span>
+                                <span class="font-medium">{{shippingCost === 0 ? 'Grátis' : R$ ${formatPrice(shippingCost)}}}</span>
                             </div>
                             <div v-if="cartTotal > 300" class="text-green-600 text-sm">
                                 <i class="fas fa-check-circle mr-1"></i> Parabéns! Seu frete é grátis
@@ -645,10 +666,700 @@
         </transition>
     </div>
 
-    <!-- Vue.js -->
-    <script src="https://unpkg.com/vue@3.2.47/dist/vue.global.js"></script>
+    <script type="module">
+        const { createApp, ref, computed, onMounted, watch } = Vue;
+
+        createApp({
+            setup() {
+                // Estado da aplicação
+                const isAdmin = ref(false);
+                const showCart = ref(false);
+                const showWishlist = ref(false);
+                const mobileMenuOpen = ref(false);
+                const recentlyAdded = ref(null);
+                const searchQuery = ref('');
+                const sortBy = ref('name');
+                const categoryFilter = ref('');
+                const checkoutLoading = ref(false);
+                const loadingProducts = ref(false);
+                const quickViewProduct = ref(null);
+                const quickViewQuantity = ref(1);
+                const newsletterEmail = ref('');
+                const currentPage = ref(1);
+                const itemsPerPage = 8;
+                const currentEditingProduct = ref(null);
+                
+                // Categorias
+                const categories = ref([
+                    { id: 1, name: 'Eletrônicos', icon: 'fas fa-laptop', count: 12 },
+                    { id: 2, name: 'Smartphones', icon: 'fas fa-mobile-alt', count: 8 },
+                    { id: 3, name: 'Áudio', icon: 'fas fa-headphones', count: 5 },
+                    { id: 4, name: 'Acessórios', icon: 'fas fa-keyboard', count: 15 }
+                ]);
+
+                // Produtos
+                const savedProducts = localStorage.getItem('products');
+                const products = ref(savedProducts ? JSON.parse(savedProducts) : [
+                    { 
+                        id: 1, 
+                        name: 'Notebook Ultra Slim', 
+                        description: 'Notebook de alto desempenho com tela Full HD e 8GB de RAM', 
+                        price: 4299.99,
+                        images: [
+                            'https://images.unsplash.com/photo-1593642632823-8f785ba67e45?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+                            'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80'
+                        ],
+                        category: 1,
+                        stock: 10,
+                        rating: 4,
+                        discount: 15,
+                        isNew: true,
+                        specs: {
+                            'Processador': 'Intel Core i5',
+                            'Memória': '8GB DDR4',
+                            'Armazenamento': '256GB SSD',
+                            'Tela': '15.6" Full HD'
+                        },
+                        reviews: 24
+                    },
+                    { 
+                        id: 2, 
+                        name: 'Smartphone Premium', 
+                        description: 'Câmera tripla de 48MP, tela AMOLED e bateria de longa duração', 
+                        price: 2999.99,
+                        images: [
+                            'https://images.unsplash.com/photo-1601784551446-20c9e07cdbdb?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+                            'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80'
+                        ],
+                        category: 2,
+                        stock: 5,
+                        rating: 5,
+                        discount: 10,
+                        isNew: false,
+                        specs: {
+                            'Tela': '6.5" AMOLED',
+                            'Câmera': '48MP + 12MP + 5MP',
+                            'Bateria': '4000mAh',
+                            'Processador': 'Snapdragon 865'
+                        },
+                        reviews: 42
+                    },
+                    { 
+                        id: 3, 
+                        name: 'Fones Bluetooth', 
+                        description: 'Cancelamento de ruído ativo e 30h de bateria', 
+                        price: 799.99,
+                        images: [
+                            'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+                            'https://images.unsplash.com/photo-1572569511254-d8f925fe2cbb?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80'
+                        ],
+                        category: 3,
+                        stock: 8,
+                        rating: 4,
+                        discount: 0,
+                        isNew: true,
+                        specs: {
+                            'Bateria': '30h de uso',
+                            'Conexão': 'Bluetooth 5.0',
+                            'Cancelamento de Ruído': 'Ativo',
+                            'Peso': '250g'
+                        },
+                        reviews: 15
+                    },
+                    { 
+                        id: 4, 
+                        name: 'Smartwatch Pro', 
+                        description: 'Monitoramento de saúde e resistente à água', 
+                        price: 1299.99,
+                        images: [
+                            'https://images.unsplash.com/photo-1523275335684-37898b6baf30?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+                            'https://images.unsplash.com/photo-1558126319-c9feecbf57ee?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80'
+                        ],
+                        category: 1,
+                        stock: 0,
+                        rating: 3,
+                        discount: 20,
+                        isNew: false,
+                        specs: {
+                            'Tela': '1.4" AMOLED',
+                            'Bateria': '7 dias',
+                            'Resistência': '5ATM',
+                            'Sensores': 'Frequência cardíaca, SpO2'
+                        },
+                        reviews: 8
+                    },
+                    { 
+                        id: 5, 
+                        name: 'Teclado Mecânico', 
+                        description: 'Switches azuis e iluminação RGB personalizável', 
+                        price: 399.99,
+                        images: [
+                            'https://images.unsplash.com/photo-1587829741301-dc798b83add3?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+                            'https://images.unsplash.com/photo-1555680512-5b1d2c3f3a23?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80'
+                        ],
+                        category: 4,
+                        stock: 15,
+                        rating: 5,
+                        discount: 0,
+                        isNew: false,
+                        specs: {
+                            'Tipo': 'Mecânico',
+                            'Switches': 'Blue',
+                            'Iluminação': 'RGB',
+                            'Conexão': 'USB'
+                        },
+                        reviews: 31
+                    },
+                    { 
+                        id: 6, 
+                        name: 'Mouse Gamer', 
+                        description: '16000 DPI e design ergonômico', 
+                        price: 299.99,
+                        images: [
+                            'https://images.unsplash.com/photo-1527814050087-3793815479db?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+                            'https://images.unsplash.com/photo-1547394765-185e1e68f34e?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80'
+                        ],
+                        category: 4,
+                        stock: 12,
+                        rating: 4,
+                        discount: 5,
+                        isNew: true,
+                        specs: {
+                            'DPI': '16000',
+                            'Botões': '6 programáveis',
+                            'Peso': '120g',
+                            'Conexão': 'USB'
+                        },
+                        reviews: 19
+                    },
+                    { 
+                        id: 7, 
+                        name: 'Monitor 4K Dell 27"', 
+                        description: 'Tela de 27 polegadas com taxa de atualização de 144Hz e HDR400', 
+                        price: 2499.99,
+                        images: [
+                            'https://i.imgur.com/8Km9tLL.jpg',
+                            'https://i.imgur.com/J9a7x1h.jpg'
+                        ],
+                        category: 1,
+                        stock: 3,
+                        rating: 5,
+                        discount: 0,
+                        isNew: true,
+                        specs: {
+                            'Tamanho': '27 polegadas',
+                            'Resolução': '3840x2160 (4K)',
+                            'Taxa de Atualização': '144Hz',
+                            'Tipo de Painel': 'IPS',
+                            'HDR': 'HDR400'
+                        },
+                        reviews: 27
+                    },
+                    { 
+                        id: 8, 
+                        name: 'Caixa de Som Bluetooth', 
+                        description: 'Som surround 360° e 20h de bateria', 
+                        price: 599.99,
+                        images: [
+    'https://images.unsplash.com/photo-1572569511254-d8f925fe2cbb?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+    'https://images.unsplash.com/photo-1602526216034-00fd17b41a46?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80'
+],
+                        category: 3,
+                        stock: 7,
+                        rating: 4,
+                        discount: 0,
+                        isNew: false,
+                        specs: {
+                            'Potência': '20W RMS',
+                            'Bateria': '20 horas',
+                            'Conexões': 'Bluetooth, AUX',
+                            'Resistência': 'IPX7'
+                        },
+                        reviews: 13
+                    }
+                ]);
+
+                // Carrinho
+                const savedCart = localStorage.getItem('cart');
+                const cart = ref(savedCart ? JSON.parse(savedCart) : []);
+                
+                // Lista de Desejos
+                const savedWishlist = localStorage.getItem('wishlist');
+                const wishlist = ref(savedWishlist ? JSON.parse(savedWishlist) : []);
+                
+                // Novo produto (admin)
+                const newProduct = ref({
+                    name: '',
+                    price: '',
+                    description: '',
+                    images: [],
+                    category: '',
+                    stock: 10,
+                    rating: 5,
+                    discount: 0,
+                    specs: {}
+                });
+
+                // Computed properties
+                const shippingCost = computed(() => {
+                    return cartTotal.value > 300 ? 0 : 19.99;
+                });
+
+                const cartTotal = computed(() => {
+                    return cart.value.reduce((total, item) => {
+                        const price = item.discount ? item.price * (1 - item.discount/100) : item.price;
+                        return total + (price * item.quantity);
+                    }, 0);
+                });
+
+                const cartTotalItems = computed(() => {
+                    return cart.value.reduce((total, item) => total + item.quantity, 0);
+                });
+
+                const totalPages = computed(() => {
+                    return Math.ceil(filteredProducts.value.length / itemsPerPage);
+                });
+
+                const visiblePages = computed(() => {
+                    const pages = [];
+                    const maxVisible = 5;
+                    let start = Math.max(1, currentPage.value - Math.floor(maxVisible / 2));
+                    let end = Math.min(totalPages.value, start + maxVisible - 1);
+                    
+                    if (end - start + 1 < maxVisible) {
+                        start = Math.max(1, end - maxVisible + 1);
+                    }
+                    
+                    for (let i = start; i <= end; i++) {
+                        pages.push(i);
+                    }
+                    
+                    return pages;
+                });
+
+                const paginatedProducts = computed(() => {
+                    const start = (currentPage.value - 1) * itemsPerPage;
+                    const end = start + itemsPerPage;
+                    return filteredProducts.value.slice(start, end);
+                });
+
+                const filteredProducts = computed(() => {
+                    let filtered = [...products.value];
+                    
+                    // Filtro por pesquisa
+                    if (searchQuery.value) {
+                        const query = searchQuery.value.toLowerCase();
+                        filtered = filtered.filter(product => 
+                            product.name.toLowerCase().includes(query) || 
+                            product.description.toLowerCase().includes(query)
+                        );
+                    }
+                    
+                    // Filtro por categoria
+                    if (categoryFilter.value) {
+                        filtered = filtered.filter(product => product.category == categoryFilter.value);
+                    }
+                    
+                    // Ordenação
+                    switch(sortBy.value) {
+                        case 'name':
+                            filtered.sort((a, b) => a.name.localeCompare(b.name));
+                            break;
+                        case 'priceLow':
+                            filtered.sort((a, b) => {
+                                const priceA = a.discount ? a.price * (1 - a.discount/100) : a.price;
+                                const priceB = b.discount ? b.price * (1 - b.discount/100) : b.price;
+                                return priceA - priceB;
+                            });
+                            break;
+                        case 'priceHigh':
+                            filtered.sort((a, b) => {
+                                const priceA = a.discount ? a.price * (1 - a.discount/100) : a.price;
+                                const priceB = b.discount ? b.price * (1 - b.discount/100) : b.price;
+                                return priceB - priceA;
+                            });
+                            break;
+                        case 'rating':
+                            filtered.sort((a, b) => b.rating - a.rating);
+                            break;
+                        case 'newest':
+                            filtered.sort((a, b) => b.id - a.id);
+                            break;
+                        case 'discount':
+                            filtered.sort((a, b) => (b.discount || 0) - (a.discount || 0));
+                            break;
+                    }
+                    
+                    return filtered;
+                });
+
+                // Métodos
+                const formatPrice = (price) => {
+                    return parseFloat(price).toFixed(2).replace('.', ',');
+                };
+
+                const toggleCart = () => {
+                    showCart.value = !showCart.value;
+                };
+
+                const toggleWishlist = () => {
+                    showWishlist.value = !showWishlist.value;
+                };
+
+                const toggleAdminPanel = () => {
+                    isAdmin.value = !isAdmin.value;
+                    if (isAdmin.value) {
+                        newProduct.value = {
+                            name: '',
+                            price: '',
+                            description: '',
+                            images: [],
+                            category: '',
+                            stock: 10,
+                            rating: 5,
+                            discount: 0,
+                            specs: {}
+                        };
+                        currentEditingProduct.value = null;
+                    }
+                };
+
+                const performSearch = () => {
+                    currentPage.value = 1;
+                    loadingProducts.value = true;
+                    setTimeout(() => {
+                        loadingProducts.value = false;
+                    }, 500);
+                };
+
+                const filterByCategory = (categoryId) => {
+                    categoryFilter.value = categoryId;
+                    currentPage.value = 1;
+                    scrollToProducts();
+                };
+
+                const resetFilters = () => {
+                    searchQuery.value = '';
+                    categoryFilter.value = '';
+                    sortBy.value = 'name';
+                    currentPage.value = 1;
+                };
+
+                const scrollToProducts = () => {
+                    const element = document.getElementById('products-section');
+                    if (element) {
+                        element.scrollIntoView({ behavior: 'smooth' });
+                    }
+                };
+
+                const isInWishlist = (productId) => {
+                    return wishlist.value.some(item => item.id === productId);
+                };
+
+                const toggleWishlistItem = (product) => {
+                    const index = wishlist.value.findIndex(item => item.id === product.id);
+                    if (index > -1) {
+                        wishlist.value.splice(index, 1);
+                    } else {
+                        wishlist.value.push({...product});
+                    }
+                    saveWishlistToLocalStorage();
+                };
+
+                const quickView = (product) => {
+                    quickViewProduct.value = {...product};
+                    quickViewQuantity.value = 1;
+                };
+
+                const addToCart = (product, quantity = 1) => {
+                    if (product.stock <= 0) return;
+                    
+                    const existingItem = cart.value.find(item => item.id === product.id);
+                    
+                    if (existingItem) {
+                        if (existingItem.quantity + quantity > product.stock) {
+                            alert(Quantidade indisponível em estoque. Máximo: ${product.stock});
+                            return;
+                        }
+                        existingItem.quantity += quantity;
+                    } else {
+                        cart.value.push({
+                            ...product,
+                            quantity: quantity
+                        });
+                    }
+                    
+                    recentlyAdded.value = product.id;
+                    saveCartToLocalStorage();
+                    
+                    // Feedback visual
+                    showCart.value = true;
+                };
+
+                const increaseQuantity = (item) => {
+                    const product = products.value.find(p => p.id === item.id);
+                    if (item.quantity >= product.stock) {
+                        alert(Quantidade máxima em estoque: ${product.stock});
+                        return;
+                    }
+                    
+                    item.quantity += 1;
+                    saveCartToLocalStorage();
+                };
+
+                const decreaseQuantity = (item) => {
+                    if (item.quantity > 1) {
+                        item.quantity -= 1;
+                    } else {
+                        removeFromCart(item);
+                    }
+                    saveCartToLocalStorage();
+                };
+
+                const removeFromCart = (item) => {
+                    const index = cart.value.findIndex(i => i.id === item.id);
+                    if (index > -1) {
+                        cart.value.splice(index, 1);
+                    }
+                    saveCartToLocalStorage();
+                };
+
+                const editProduct = (product) => {
+                    currentEditingProduct.value = product.id;
+                    newProduct.value = {...product};
+                    isAdmin.value = true;
+                };
+
+                const addProduct = () => {
+                    const newId = products.value.length > 0 ? 
+                        Math.max(...products.value.map(p => p.id)) + 1 : 1;
+                    
+                    const product = {
+                        id: newId,
+                        name: newProduct.value.name,
+                        description: newProduct.value.description,
+                        price: parseFloat(newProduct.value.price),
+                        images: [...newProduct.value.images],
+                        category: parseInt(newProduct.value.category),
+                        stock: parseInt(newProduct.value.stock),
+                        rating: parseInt(newProduct.value.rating),
+                        discount: parseInt(newProduct.value.discount || 0),
+                        isNew: true,
+                        specs: {...newProduct.value.specs},
+                        reviews: 0
+                    };
+                    
+                    products.value.push(product);
+                    saveProductsToLocalStorage();
+                    
+                    resetProductForm();
+                    isAdmin.value = false;
+                };
+
+                const updateProduct = () => {
+                    const index = products.value.findIndex(p => p.id === currentEditingProduct.value);
+                    if (index > -1) {
+                        products.value[index] = {
+                            ...products.value[index],
+                            name: newProduct.value.name,
+                            description: newProduct.value.description,
+                            price: parseFloat(newProduct.value.price),
+                            images: [...newProduct.value.images],
+                            category: parseInt(newProduct.value.category),
+                            stock: parseInt(newProduct.value.stock),
+                            rating: parseInt(newProduct.value.rating),
+                            discount: parseInt(newProduct.value.discount || 0),
+                            specs: {...newProduct.value.specs}
+                        };
+                        
+                        saveProductsToLocalStorage();
+                        resetProductForm();
+                        isAdmin.value = false;
+                        currentEditingProduct.value = null;
+                    }
+                };
+
+                const resetProductForm = () => {
+                    newProduct.value = {
+                        name: '',
+                        price: '',
+                        description: '',
+                        images: [],
+                        category: '',
+                        stock: 10,
+                        rating: 5,
+                        discount: 0,
+                        specs: {}
+                    };
+                };
+
+                const cancelAddProduct = () => {
+                    resetProductForm();
+                    isAdmin.value = false;
+                    currentEditingProduct.value = null;
+                };
+
+                const handleImageUpload = (event) => {
+                    const files = event.target.files;
+                    if (!files || files.length === 0) return;
+                    
+                    for (let i = 0; i < files.length; i++) {
+                        const file = files[i];
+                        if (file.size > 5 * 1024 * 1024) { // 5MB
+                            alert('Arquivo muito grande (máximo 5MB)');
+                            continue;
+                        }
+                        
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            newProduct.value.images.push(e.target.result);
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                };
+
+                const removeProductImage = (index) => {
+                    newProduct.value.images.splice(index, 1);
+                };
+
+                const handleImageError = (product, index) => {
+    // Substitui por um placeholder genérico
+    product.images[index] = 'https://via.placeholder.com/300x200?text=Imagem+Não+Disponível';
     
-    <!-- JavaScript Local -->
-    <script src="js/app.js" type="module"></script>
+    // Se estiver editando no painel admin, atualize também o newProduct
+    if (currentEditingProduct.value && currentEditingProduct.value.id === product.id) {
+        const editIndex = newProduct.value.images.findIndex(img => img === product.images[index]);
+        if (editIndex > -1) {
+            newProduct.value.images[editIndex] = 'https://via.placeholder.com/300x200?text=Imagem+Não+Disponível';
+        }
+    }
+};
+
+                const subscribeNewsletter = () => {
+                    if (!newsletterEmail.value) {
+                        alert('Por favor, insira seu e-mail');
+                        return;
+                    }
+                    
+                    // Simular envio
+                    setTimeout(() => {
+                        alert(Obrigado por assinar nossa newsletter! Um cupom de 10% de desconto foi enviado para ${newsletterEmail.value});
+                        newsletterEmail.value = '';
+                    }, 500);
+                };
+
+                const checkout = async () => {
+                    checkoutLoading.value = true;
+                    
+                    try {
+                        // Simula processamento do pagamento
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                        
+                        // Atualiza estoque
+                        cart.value.forEach(item => {
+                            const product = products.value.find(p => p.id === item.id);
+                            if (product) {
+                                product.stock -= item.quantity;
+                            }
+                        });
+                        
+                        // Notificação de sucesso
+                        alert(Pedido #${Math.floor(Math.random() * 10000)} realizado com sucesso!\nTotal: R$ ${formatPrice(cartTotal.value + shippingCost.value)}\nUm e-mail de confirmação foi enviado.);
+                        
+                        // Limpa carrinho
+                        cart.value = [];
+                        saveCartToLocalStorage();
+                        saveProductsToLocalStorage();
+                        
+                        // Fecha carrinho
+                        showCart.value = false;
+                    } catch (error) {
+                        alert('Erro no pagamento: ' + error.message);
+                    } finally {
+                        checkoutLoading.value = false;
+                    }
+                };
+
+                const saveCartToLocalStorage = () => {
+                    localStorage.setItem('cart', JSON.stringify(cart.value));
+                };
+
+                const saveWishlistToLocalStorage = () => {
+                    localStorage.setItem('wishlist', JSON.stringify(wishlist.value));
+                };
+
+                const saveProductsToLocalStorage = () => {
+                    localStorage.setItem('products', JSON.stringify(products.value));
+                };
+
+                // Watchers
+                watch(cart, saveCartToLocalStorage, { deep: true });
+                watch(wishlist, saveWishlistToLocalStorage, { deep: true });
+                watch(products, saveProductsToLocalStorage, { deep: true });
+
+                // Lifecycle hooks
+                onMounted(() => {
+                    // Simula carregamento de produtos
+                    loadingProducts.value = true;
+                    setTimeout(() => {
+                        loadingProducts.value = false;
+                    }, 800);
+                });
+
+                return {
+                    isAdmin,
+                    showCart,
+                    showWishlist,
+                    mobileMenuOpen,
+                    products,
+                    cart,
+                    wishlist,
+                    categories,
+                    newProduct,
+                    recentlyAdded,
+                    searchQuery,
+                    sortBy,
+                    categoryFilter,
+                    checkoutLoading,
+                    loadingProducts,
+                    quickViewProduct,
+                    quickViewQuantity,
+                    newsletterEmail,
+                    currentPage,
+                    totalPages,
+                    visiblePages,
+                    currentEditingProduct,
+                    cartTotal,
+                    cartTotalItems,
+                    shippingCost,
+                    filteredProducts: paginatedProducts,
+                    formatPrice,
+                    toggleCart,
+                    toggleWishlist,
+                    toggleAdminPanel,
+                    performSearch,
+                    filterByCategory,
+                    resetFilters,
+                    scrollToProducts,
+                    isInWishlist,
+                    toggleWishlistItem,
+                    quickView,
+                    addToCart,
+                    increaseQuantity,
+                    decreaseQuantity,
+                    removeFromCart,
+                    editProduct,
+                    addProduct,
+                    updateProduct,
+                    cancelAddProduct,
+                    handleImageUpload,
+                    removeProductImage,
+                    handleImageError,
+                    subscribeNewsletter,
+                    checkout
+                };
+            }
+        }).mount('#app');
+    </script>
 </body>
 </html>
